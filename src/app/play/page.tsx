@@ -44,13 +44,14 @@ export default function PlayPage() {
   const [streak, setStreak] = useState(0);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Initialize game
   useEffect(() => {
     const savedConfig = loadConfig();
     if (!savedConfig) {
-      router.push('/setup');
+      router.push('/lobby');
       return;
     }
     setConfig(savedConfig);
@@ -274,6 +275,11 @@ export default function PlayPage() {
     handleNextPrompt();
   }, [currentPrompt, handleNextPrompt]);
 
+  const handleEndGame = useCallback(() => {
+    setGameStatus('finished');
+    setShowEndConfirm(false);
+  }, []);
+
   // Global keyboard listener for shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -382,7 +388,14 @@ export default function PlayPage() {
         <Link href="/" className="text-lg font-bold">
           <span className="text-accent">README</span> Game
         </Link>
-        <div className="flex items-center gap-6 font-mono">
+        <div className="flex items-center gap-4 font-mono">
+          <button
+            onClick={() => setShowEndConfirm(true)}
+            className="text-muted hover:text-wrong transition-colors text-sm"
+            disabled={isSubmitting}
+          >
+            End Game
+          </button>
           <div className={`text-2xl font-bold ${
             timerCritical ? 'text-wrong animate-pulse shake' :
             timerUrgent ? 'text-wrong animate-pulse' : ''
@@ -405,6 +418,32 @@ export default function PlayPage() {
           )}
         </div>
       </header>
+
+      {/* End Game Confirmation Modal */}
+      {showEndConfirm && (
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-lg font-semibold">End game early?</h3>
+            <p className="text-muted text-sm">
+              You still have {formatTime(timeRemaining)} remaining. Your current score is {score} points.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleEndGame}
+                className="flex-1 bg-wrong text-background font-semibold py-3 px-4 rounded-lg hover:bg-wrong/90 transition-colors"
+              >
+                End Game
+              </button>
+              <button
+                onClick={() => setShowEndConfirm(false)}
+                className="flex-1 bg-muted/20 text-foreground font-semibold py-3 px-4 rounded-lg hover:bg-muted/30 transition-colors"
+              >
+                Keep Playing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main game area */}
       <main className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full">

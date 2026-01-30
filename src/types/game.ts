@@ -45,3 +45,14 @@ export type GameAction =
   | { type: 'SUBMIT_RESULT'; result: GuessResult }
   | { type: 'NEXT_PROMPT' }
   | { type: 'END_GAME' };
+
+export interface APIKeyStore {
+  google?: string;
+  openai?: string;
+  anthropic?: string;
+}
+
+export interface UserPreferences {
+  lastUsedModel: string;
+  customInstructions: string;
+}

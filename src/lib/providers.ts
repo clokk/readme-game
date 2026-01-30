@@ -87,3 +87,26 @@ export function getProvider(providerId: AIProvider): ProviderInfo {
 export function getDefaultModel(providerId: AIProvider): string {
   return getProvider(providerId).defaultModel;
 }
+
+export interface GroupedModels {
+  provider: ProviderInfo;
+  models: ModelInfo[];
+}
+
+export function getAvailableModels(configuredProviders: AIProvider[]): GroupedModels[] {
+  return PROVIDERS
+    .filter(p => configuredProviders.includes(p.id))
+    .map(p => ({
+      provider: p,
+      models: p.models,
+    }));
+}
+
+export function getProviderForModel(modelId: string): AIProvider | null {
+  for (const provider of PROVIDERS) {
+    if (provider.models.some(m => m.id === modelId)) {
+      return provider.id;
+    }
+  }
+  return null;
+}
