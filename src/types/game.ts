@@ -15,12 +15,13 @@ export interface GuessResult {
   points: number;
 }
 
-export type AIProvider = 'anthropic' | 'google';
+export type AIProvider = 'anthropic' | 'google' | 'openai';
 
 export interface GameConfig {
   apiKey: string;
   customInstructions: string;
   provider: AIProvider;
+  model: string;
 }
 
 export interface GameState {

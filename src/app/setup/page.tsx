@@ -4,43 +4,22 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadConfig, saveConfig } from '@/lib/storage';
-import { AIProvider, GameConfig } from '@/types/game';
-
-const PROVIDERS: { id: AIProvider; name: string; keyPrefix: string; keyPlaceholder: string; helpUrl: string; helpSteps: string[] }[] = [
-  {
-    id: 'google',
-    name: 'Google Gemini',
-    keyPrefix: 'AIza',
-    keyPlaceholder: 'AIza...',
-    helpUrl: 'https://aistudio.google.com/apikey',
-    helpSteps: [
-      'Go to aistudio.google.com/apikey',
-      'Sign in with your Google account',
-      'Click "Create API Key"',
-      'Copy and paste it here',
-    ],
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    keyPrefix: 'sk-ant-',
-    keyPlaceholder: 'sk-ant-...',
-    helpUrl: 'https://console.anthropic.com',
-    helpSteps: [
-      'Go to console.anthropic.com',
-      'Create an account or sign in',
-      'Navigate to API Keys',
-      'Create a new key and paste it here',
-    ],
-  },
-];
+import { GameConfig } from '@/types/game';
+import { PROVIDERS, getProvider, getDefaultModel } from '@/lib/providers';
 
 function getInitialConfig(): GameConfig {
   if (typeof window === 'undefined') {
-    return { provider: 'google', apiKey: '', customInstructions: '' };
+    return { provider: 'google', apiKey: '', customInstructions: '', model: getDefaultModel('google') };
   }
   const stored = loadConfig();
-  return stored || { provider: 'google', apiKey: '', customInstructions: '' };
+  if (stored) {
+    // Ensure model exists (migration for old configs)
+    if (!stored.model) {
+      stored.model = getDefaultModel(stored.provider);
+    }
+    return stored;
+  }
+  return { provider: 'google', apiKey: '', customInstructions: '', model: getDefaultModel('google') };
 }
 
 export default function SetupPage() {
@@ -49,10 +28,19 @@ export default function SetupPage() {
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
 
-  const selectedProvider = PROVIDERS.find(p => p.id === config.provider)!;
+  const selectedProvider = getProvider(config.provider);
 
   const updateConfig = (updates: Partial<GameConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleProviderChange = (providerId: typeof config.provider) => {
+    updateConfig({
+      provider: providerId,
+      model: getDefaultModel(providerId),
+      apiKey: '', // Clear API key when changing provider
+    });
+    setError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -73,6 +61,7 @@ export default function SetupPage() {
       apiKey: config.apiKey.trim(),
       customInstructions: config.customInstructions.trim(),
       provider: config.provider,
+      model: config.model,
     });
     router.push('/play');
   };
@@ -100,15 +89,12 @@ export default function SetupPage() {
             <label className="block text-sm font-medium">
               AI Provider
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {PROVIDERS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => {
-                    updateConfig({ provider: p.id });
-                    setError('');
-                  }}
+                  onClick={() => handleProviderChange(p.id)}
                   className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
                     config.provider === p.id
                       ? 'border-accent bg-accent/10 text-accent'
@@ -124,6 +110,25 @@ export default function SetupPage() {
                 Gemini Flash is fast and cheap - great for testing!
               </p>
             )}
+          </div>
+
+          {/* Model Selection */}
+          <div className="space-y-2">
+            <label htmlFor="model" className="block text-sm font-medium">
+              Model
+            </label>
+            <select
+              id="model"
+              value={config.model}
+              onChange={(e) => updateConfig({ model: e.target.value })}
+              className="w-full bg-card border border-muted/30 rounded-lg px-4 py-3 text-sm focus:border-accent"
+            >
+              {selectedProvider.models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} - {m.description}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* API Key */}

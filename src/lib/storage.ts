@@ -1,4 +1,5 @@
 import { GameConfig } from '@/types/game';
+import { getDefaultModel } from '@/lib/providers';
 
 const CONFIG_KEY = 'readme-game-config';
 
@@ -12,7 +13,12 @@ export function loadConfig(): GameConfig | null {
   const stored = localStorage.getItem(CONFIG_KEY);
   if (!stored) return null;
   try {
-    return JSON.parse(stored) as GameConfig;
+    const config = JSON.parse(stored) as GameConfig;
+    // Migration: ensure model field exists
+    if (!config.model && config.provider) {
+      config.model = getDefaultModel(config.provider);
+    }
+    return config;
   } catch {
     return null;
   }

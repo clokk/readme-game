@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { Guess, AIProvider } from '@/types/game';
+import { getDefaultModel } from '@/lib/providers';
 
 interface GuessRequest {
   description: string;
   apiKey: string;
   customInstructions: string;
   provider: AIProvider;
+  model?: string;
 }
 
 interface GuessResponse {
@@ -63,11 +66,11 @@ GUESS 1: [word] - [brief reasoning]
 GUESS 2: [word] - [brief reasoning]
 GUESS 3: [word] - [brief reasoning]`;
 
-async function getAnthropicGuesses(description: string, apiKey: string, customInstructions: string): Promise<Guess[]> {
+async function getAnthropicGuesses(description: string, apiKey: string, customInstructions: string, model: string): Promise<Guess[]> {
   const client = new Anthropic({ apiKey });
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model,
     max_tokens: 300,
     system: SYSTEM_PROMPT_TEMPLATE(customInstructions),
     messages: [
@@ -82,23 +85,45 @@ async function getAnthropicGuesses(description: string, apiKey: string, customIn
   return parseGuesses(responseText);
 }
 
-async function getGoogleGuesses(description: string, apiKey: string, customInstructions: string): Promise<Guess[]> {
+async function getGoogleGuesses(description: string, apiKey: string, customInstructions: string, model: string): Promise<Guess[]> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  const genModel = genAI.getGenerativeModel({ model });
 
   const prompt = `${SYSTEM_PROMPT_TEMPLATE(customInstructions)}
 
 My description: "${description}"`;
 
-  const result = await model.generateContent(prompt);
+  const result = await genModel.generateContent(prompt);
   const responseText = result.response.text();
+  return parseGuesses(responseText);
+}
+
+async function getOpenAIGuesses(description: string, apiKey: string, customInstructions: string, model: string): Promise<Guess[]> {
+  const client = new OpenAI({ apiKey });
+
+  const completion = await client.chat.completions.create({
+    model,
+    max_tokens: 300,
+    messages: [
+      {
+        role: 'system',
+        content: SYSTEM_PROMPT_TEMPLATE(customInstructions),
+      },
+      {
+        role: 'user',
+        content: `My description: "${description}"`,
+      },
+    ],
+  });
+
+  const responseText = completion.choices[0]?.message?.content || '';
   return parseGuesses(responseText);
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<GuessResponse>> {
   try {
     const body: GuessRequest = await request.json();
-    const { description, apiKey, customInstructions, provider = 'google' } = body;
+    const { description, apiKey, customInstructions, provider = 'google', model } = body;
 
     if (!description || !apiKey) {
       return NextResponse.json(
@@ -107,12 +132,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<GuessResp
       );
     }
 
+    const selectedModel = model || getDefaultModel(provider);
     let guesses: Guess[];
 
-    if (provider === 'anthropic') {
-      guesses = await getAnthropicGuesses(description, apiKey, customInstructions);
-    } else {
-      guesses = await getGoogleGuesses(description, apiKey, customInstructions);
+    switch (provider) {
+      case 'anthropic':
+        guesses = await getAnthropicGuesses(description, apiKey, customInstructions, selectedModel);
+        break;
+      case 'openai':
+        guesses = await getOpenAIGuesses(description, apiKey, customInstructions, selectedModel);
+        break;
+      default:
+        guesses = await getGoogleGuesses(description, apiKey, customInstructions, selectedModel);
     }
 
     // Ensure we always have 3 guesses

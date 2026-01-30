@@ -139,6 +139,7 @@ export default function PlayPage() {
           apiKey: config.apiKey,
           customInstructions: config.customInstructions,
           provider: config.provider,
+          model: config.model,
         }),
       });
 
