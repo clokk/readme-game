@@ -89,28 +89,88 @@ export default function PlayPage() {
     const normalizedText = text.toLowerCase();
     const violations: string[] = [];
 
-    // Check forbidden words in text
+    // Check forbidden words in text (substring matching)
     for (const word of currentPrompt.forbiddenWords) {
       if (normalizedText.includes(word.toLowerCase())) {
         violations.push(word);
       }
     }
 
-    // Check if user used a variant of the secret word itself
+    // Check if user used the secret word itself (word-boundary matching only)
     const secretWord = currentPrompt.word.toLowerCase();
-    const textWords = normalizedText.split(/\s+/);
-    for (const textWord of textWords) {
-      // If any word in text contains the secret word or vice versa (min 3 chars to avoid false positives)
-      if (textWord.length > 2 && (
-        textWord.includes(secretWord) ||
-        secretWord.includes(textWord)
-      )) {
-        violations.push(`[${currentPrompt.word}]`);
-        break;
-      }
+    const secretWordRegex = new RegExp(`\\b${secretWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (secretWordRegex.test(text)) {
+      violations.push(currentPrompt.word);
     }
 
     return [...new Set(violations)];
+  }, [currentPrompt]);
+
+  // Sound effect for correct answers - satisfying chord "ding"
+  const playDing = useCallback(() => {
+    const ctx = new AudioContext();
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination);
+    masterGain.gain.setValueAtTime(0.25, ctx.currentTime);
+    masterGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+
+    // Play a major chord (root, major third, perfect fifth) for a pleasant sound
+    const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+    frequencies.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.connect(oscGain);
+      oscGain.connect(masterGain);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      // Stagger slightly for a richer sound
+      oscGain.gain.setValueAtTime(0.4 - i * 0.1, ctx.currentTime);
+      osc.start(ctx.currentTime + i * 0.02);
+      osc.stop(ctx.currentTime + 0.5);
+    });
+  }, []);
+
+  // Sound effect for next word - subtle "whoosh"
+  const playWhoosh = useCallback(() => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  }, []);
+
+  // Render text with forbidden words highlighted
+  const renderHighlightedText = useCallback((text: string): React.ReactNode[] => {
+    if (!currentPrompt || !text) return [text];
+
+    // Build list of all forbidden words including the secret word
+    const allForbidden = [currentPrompt.word.toLowerCase(), ...currentPrompt.forbiddenWords.map(w => w.toLowerCase())];
+
+    // Create a regex that matches any forbidden word (case insensitive)
+    const pattern = allForbidden
+      .map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|');
+    const regex = new RegExp(`(${pattern})`, 'gi');
+
+    const parts = text.split(regex);
+    return parts.map((part, i) => {
+      const isMatch = allForbidden.includes(part.toLowerCase());
+      if (isMatch) {
+        return (
+          <mark key={i} className="bg-wrong/50 text-transparent rounded">
+            {part}
+          </mark>
+        );
+      }
+      return part;
+    });
   }, [currentPrompt]);
 
   const handleSubmit = async () => {
@@ -179,6 +239,7 @@ export default function PlayPage() {
         setStreak((prev) => prev + 1);
         setLastPoints(points);
         setTimeout(() => setLastPoints(null), 800);
+        playDing();
       } else {
         setStreak(0);
       }
@@ -194,12 +255,13 @@ export default function PlayPage() {
       setGameStatus('finished');
       return;
     }
+    playWhoosh();
     setCurrentPromptIndex((prev) => prev + 1);
     setDescription('');
     setCurrentResult(null);
     setError('');
     setGameStatus('playing');
-  }, [currentPromptIndex, prompts.length]);
+  }, [currentPromptIndex, prompts.length, playWhoosh]);
 
   const handleSkip = useCallback(() => {
     if (!currentPrompt) return;
@@ -371,6 +433,16 @@ export default function PlayPage() {
           <div className="text-center">
             <span className="text-muted text-sm">Forbidden:</span>
             <div className="flex flex-wrap justify-center gap-2 mt-2">
+              {/* Secret word shown first with distinct styling */}
+              <span
+                className={`px-3 py-1 rounded text-sm font-mono ${
+                  forbiddenInDescription.includes(currentPrompt.word)
+                    ? 'bg-wrong/30 text-wrong line-through'
+                    : 'bg-accent/20 text-accent'
+                }`}
+              >
+                {currentPrompt.word}
+              </span>
               {currentPrompt.forbiddenWords.map((word) => (
                 <span
                   key={word}
@@ -390,30 +462,42 @@ export default function PlayPage() {
         {/* Input area */}
         {gameStatus === 'playing' && (
           <div className="w-full space-y-4">
-            <textarea
-              key={shakeKey}
-              ref={inputRef}
-              value={description}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                const hadViolations = checkForbiddenWords(description).length > 0;
-                const hasViolations = checkForbiddenWords(newValue).length > 0;
-                // Trigger shake when new violation is detected
-                if (!hadViolations && hasViolations) {
-                  setShakeKey((prev) => prev + 1);
-                }
-                setDescription(newValue);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Describe the word without using forbidden words..."
-              className={`w-full bg-card border rounded-lg px-4 py-4 text-lg resize-none focus:border-accent ${
-                forbiddenInDescription.length > 0
-                  ? 'border-wrong shake'
-                  : 'border-muted/30'
-              }`}
-              rows={3}
-              disabled={isSubmitting}
-            />
+            <div className="relative">
+              {/* Highlight layer - only shown when forbidden words detected */}
+              {forbiddenInDescription.length > 0 && (
+                <div
+                  className="absolute inset-0 px-4 py-4 text-lg whitespace-pre-wrap break-words pointer-events-none overflow-hidden rounded-lg text-transparent"
+                  aria-hidden="true"
+                >
+                  {renderHighlightedText(description)}
+                </div>
+              )}
+              {/* Actual textarea - transparent bg when showing highlights */}
+              <textarea
+                key={shakeKey}
+                ref={inputRef}
+                value={description}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  const hadViolations = checkForbiddenWords(description).length > 0;
+                  const hasViolations = checkForbiddenWords(newValue).length > 0;
+                  // Trigger shake when new violation is detected
+                  if (!hadViolations && hasViolations) {
+                    setShakeKey((prev) => prev + 1);
+                  }
+                  setDescription(newValue);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Describe the word without using forbidden words..."
+                className={`w-full border rounded-lg px-4 py-4 text-lg resize-none focus:border-accent relative z-10 ${
+                  forbiddenInDescription.length > 0
+                    ? 'border-wrong shake bg-transparent'
+                    : 'border-muted/30 bg-card'
+                }`}
+                rows={3}
+                disabled={isSubmitting}
+              />
+            </div>
 
             {forbiddenInDescription.length > 0 && (
               <div className="text-wrong text-sm flex items-center gap-2">
