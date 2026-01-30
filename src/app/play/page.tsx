@@ -189,7 +189,7 @@ export default function PlayPage() {
     }
   };
 
-  const handleNextPrompt = () => {
+  const handleNextPrompt = useCallback(() => {
     if (currentPromptIndex >= prompts.length - 1) {
       setGameStatus('finished');
       return;
@@ -199,9 +199,10 @@ export default function PlayPage() {
     setCurrentResult(null);
     setError('');
     setGameStatus('playing');
-  };
+  }, [currentPromptIndex, prompts.length]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
+    if (!currentPrompt) return;
     setHistory((prev) => [...prev, {
       prompt: currentPrompt,
       description: '[Skipped]',
@@ -209,7 +210,26 @@ export default function PlayPage() {
     }]);
     setStreak(0);
     handleNextPrompt();
-  };
+  }, [currentPrompt, handleNextPrompt]);
+
+  // Global keyboard listener for shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl+Enter for next word when showing result
+      if (gameStatus === 'showing_result' && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        handleNextPrompt();
+      }
+      // Cmd/Ctrl+S for skip during playing
+      if (gameStatus === 'playing' && (e.key === 's' || e.key === 'S') && (e.metaKey || e.ctrlKey) && !isSubmitting) {
+        e.preventDefault();
+        handleSkip();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [gameStatus, handleNextPrompt, handleSkip, isSubmitting]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -414,14 +434,14 @@ export default function PlayPage() {
                 disabled={isSubmitting || forbiddenInDescription.length > 0}
                 className="flex-1 bg-accent text-background font-semibold px-6 py-4 rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Asking AI...' : 'Submit (Cmd+Enter)'}
+                {isSubmitting ? 'Asking AI...' : 'Submit (Cmd/Ctrl+Enter)'}
               </button>
               <button
                 onClick={handleSkip}
                 disabled={isSubmitting}
                 className="bg-card text-muted font-semibold px-6 py-4 rounded-lg hover:bg-card/80 hover:text-foreground transition-colors disabled:opacity-50"
               >
-                Skip
+                Skip (Cmd/Ctrl+S)
               </button>
             </div>
           </div>
@@ -477,7 +497,7 @@ export default function PlayPage() {
               onClick={handleNextPrompt}
               className="w-full bg-accent text-background font-semibold px-6 py-4 rounded-lg hover:bg-accent/90 transition-colors"
             >
-              Next Word (Cmd+Enter)
+              Next Word (Cmd/Ctrl+Enter)
             </button>
           </div>
         )}

@@ -1,7 +1,7 @@
 import { Prompt } from '@/types/game';
 
 export const prompts: Prompt[] = [
-  // EASY - Concrete nouns, common concepts (10 prompts)
+  // EASY - Concrete nouns, common concepts (30 prompts)
   {
     word: 'Elephant',
     forbiddenWords: ['animal', 'trunk', 'big', 'gray', 'tusks'],
@@ -102,8 +102,58 @@ export const prompts: Prompt[] = [
     forbiddenWords: ['wheels', 'ride', 'tricks', 'board', 'skate'],
     difficulty: 'easy',
   },
+  {
+    word: 'Microwave',
+    forbiddenWords: ['heat', 'food', 'kitchen', 'oven', 'cook'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Backpack',
+    forbiddenWords: ['bag', 'carry', 'school', 'shoulders', 'straps'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Sunglasses',
+    forbiddenWords: ['eyes', 'sun', 'shade', 'wear', 'lens'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Pillow',
+    forbiddenWords: ['sleep', 'head', 'bed', 'soft', 'rest'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Mirror',
+    forbiddenWords: ['reflection', 'glass', 'see', 'image', 'look'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Staircase',
+    forbiddenWords: ['steps', 'climb', 'up', 'down', 'floor'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Calendar',
+    forbiddenWords: ['date', 'day', 'month', 'year', 'schedule'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Blanket',
+    forbiddenWords: ['warm', 'cover', 'bed', 'cozy', 'sleep'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Candle',
+    forbiddenWords: ['fire', 'wax', 'light', 'flame', 'wick'],
+    difficulty: 'easy',
+  },
+  {
+    word: 'Elevator',
+    forbiddenWords: ['up', 'down', 'floor', 'lift', 'building'],
+    difficulty: 'easy',
+  },
 
-  // MEDIUM - Abstract concepts, actions (10 prompts)
+  // MEDIUM - Abstract concepts, actions (20 prompts)
   {
     word: 'Jealousy',
     forbiddenWords: ['envy', 'green', 'want', 'feeling', 'emotion'],
@@ -247,63 +297,13 @@ export const prompts: Prompt[] = [
     difficulty: 'hard',
   },
   {
-    word: 'Simulacrum',
-    forbiddenWords: ['copy', 'fake', 'real', 'image', 'representation'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Kaizen',
-    forbiddenWords: ['Japanese', 'improve', 'continuous', 'better', 'progress'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Solipsism',
-    forbiddenWords: ['self', 'exist', 'mind', 'real', 'philosophy'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Hegemony',
-    forbiddenWords: ['power', 'dominant', 'control', 'influence', 'authority'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Qualia',
-    forbiddenWords: ['experience', 'subjective', 'conscious', 'feel', 'sensation'],
-    difficulty: 'hard',
-  },
-  {
     word: 'Sonder',
     forbiddenWords: ['people', 'lives', 'stranger', 'realize', 'complex'],
     difficulty: 'hard',
   },
   {
-    word: 'Defenestration',
-    forbiddenWords: ['window', 'throw', 'out', 'fall', 'building'],
-    difficulty: 'hard',
-  },
-  {
     word: 'Petrichor',
     forbiddenWords: ['rain', 'smell', 'earth', 'wet', 'scent'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Hygge',
-    forbiddenWords: ['cozy', 'Danish', 'comfort', 'warm', 'atmosphere'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Wabi-sabi',
-    forbiddenWords: ['imperfect', 'beauty', 'Japanese', 'nature', 'aesthetic'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Tsundoku',
-    forbiddenWords: ['books', 'unread', 'pile', 'collect', 'Japanese'],
-    difficulty: 'hard',
-  },
-  {
-    word: 'Mamihlapinatapai',
-    forbiddenWords: ['look', 'eyes', 'want', 'unspoken', 'mutual'],
     difficulty: 'hard',
   },
 ];
